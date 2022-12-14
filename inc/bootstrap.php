@@ -8,9 +8,9 @@ define("PROJECT_ROOT_PATH", __DIR__);
 require_once PROJECT_ROOT_PATH . "\config.php";
  
 // include the base controller file
-require_once PROJECT_ROOT_PATH . "\..\controllers\baseController.php";
+require_once PROJECT_ROOT_PATH . "\..\controllers\BaseController.php";
  
-// include the use model file
-require_once PROJECT_ROOT_PATH . "\..\models\userSetsModel.php";
+// include the model files
+require_once PROJECT_ROOT_PATH . "\..\models\DefaultModel.php";
 
 ?>

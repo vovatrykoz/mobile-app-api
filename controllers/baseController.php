@@ -3,7 +3,15 @@ class BaseController
 {
     var $strErrorDesc;
     var $arrQueryStringParams;
-    
+    var $model;
+    var $requestMethod;
+
+    function __construct() {
+        $this->model = new database();
+        $this->strErrorDesc = '';
+        $this->arrQueryStringParams = $this->getQueryStringParams();
+    }
+
     /**
      * Get URI elements.
      * 
@@ -56,6 +64,35 @@ class BaseController
         }
 
         return $output;
+    }
+
+    //general function for GET requests
+    protected function getAction($params = [], $funcName = '')
+    {
+        //create an empty json obj
+        $responseData = json_encode((object)null);
+
+        if (strtoupper($this->requestMethod) == 'GET') {
+            try {
+                if ($params != []) {
+                    foreach ($params as $paramName) {
+                        $paramArray[$paramName] = $this->getQueryParam($paramName);
+                    }
+
+                    $arrInfo = $this->model->{$funcName}($paramArray);
+                } else
+                    $arrInfo = $this->model->{$funcName}();
+
+                if ($arrInfo) {
+                    $responseData = json_encode($arrInfo);
+                }
+            } catch (Error $e) {
+                echo $e;
+                exit;
+            }
+        }
+
+        return $responseData;
     }
 
     protected function sendResponse($responseData)
