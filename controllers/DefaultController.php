@@ -7,6 +7,7 @@ class DefaultController extends BaseController
     {
         $this->model = new DefaultModel();
         $this->requestMethod = $_SERVER["REQUEST_METHOD"];
+        $this->arrQueryStringParams = $this->getQueryStringParams();
     }
 
     /**

@@ -7,9 +7,9 @@ class BaseController
     var $requestMethod;
 
     function __construct() {
-        $this->model = new database();
+        $this->model = new Database();
         $this->strErrorDesc = '';
-        $this->arrQueryStringParams = $this->getQueryStringParams();
+        
     }
 
     /**
@@ -66,7 +66,9 @@ class BaseController
         return $output;
     }
 
-    //general function for GET requests
+    /**
+     * general function used for handling all possible get requests
+     */
     protected function getAction($params = [], $funcName = '')
     {
         //create an empty json obj
@@ -75,12 +77,15 @@ class BaseController
         if (strtoupper($this->requestMethod) == 'GET') {
             try {
                 if ($params != []) {
+                    //retrieve all the parameters that the user has provided
                     foreach ($params as $paramName) {
                         $paramArray[$paramName] = $this->getQueryParam($paramName);
                     }
 
+                    //forward the request with one or more parameters to the data access layer
                     $arrInfo = $this->model->{$funcName}($paramArray);
                 } else
+                    //forward the request without any parameters to the data access layer
                     $arrInfo = $this->model->{$funcName}();
 
                 if ($arrInfo) {
