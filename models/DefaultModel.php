@@ -42,4 +42,11 @@ class DefaultModel extends Database
             $outParams
         );
     }
+
+    public function getAllSets()
+    {
+        return $this->select(
+            "CALL usp_get_all_sets();"
+        );
+    }
 }

@@ -34,4 +34,12 @@ class DefaultController extends BaseController
     {
         $this->sendResponse($this->getAction(["setId"], "getSetOwner"));
     }
+
+    /**
+     * get all sets
+     */
+    public function getAllSets()
+    {
+        $this->sendResponse($this->getAction([], "getAllSets"));
+    }
 }
