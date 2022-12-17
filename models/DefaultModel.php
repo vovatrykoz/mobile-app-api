@@ -49,4 +49,25 @@ class DefaultModel extends Database
             "CALL usp_get_all_sets();"
         );
     }
+
+    public function insertEntryIntoSet($inParams)
+    {
+        $outParams = array([
+            'paramType' => "s",
+            'paramValue' => $inParams['entryTerm']
+        ],
+        [
+            'paramType' => "s",
+            'paramValue' => $inParams['entryDefinition']
+        ],
+        [
+            'paramType' => "i",
+            'paramValue' => $inParams['setId']
+        ]);
+
+        return $this->insert(
+            "CALL usp_insert_entry_into_set(?, ?, ?);",
+            $outParams
+        );
+    }
 }

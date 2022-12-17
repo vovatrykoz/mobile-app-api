@@ -6,9 +6,9 @@ class BaseController
     var $model;
     var $requestMethod;
 
-    function __construct() {
+    function __construct()
+    {
         $this->model = new Database();
-        $this->strErrorDesc = '';
         
     }
 
@@ -55,7 +55,7 @@ class BaseController
     }
 
     //extracts value of the $paramName
-    protected function getQueryParam($paramName)
+    protected function getQueryParams($paramName)
     {
         $output = null;
 
@@ -79,7 +79,7 @@ class BaseController
                 if ($params != []) {
                     //retrieve all the parameters that the user has provided
                     foreach ($params as $paramName) {
-                        $paramArray[$paramName] = $this->getQueryParam($paramName);
+                        $paramArray[$paramName] = $this->getQueryParams($paramName);
                     }
 
                     //forward the request with one or more parameters to the data access layer
@@ -91,6 +91,32 @@ class BaseController
                 if ($arrInfo) {
                     $responseData = json_encode($arrInfo);
                 }
+            } catch (Error $e) {
+                echo $e;
+                exit;
+            }
+        }
+
+        return $responseData;
+    }
+
+    /**
+     * general function for POST, PUT and DELETE requests
+     */
+    function changeAction($params = [], $funcName = '', $actionType = '')
+    {
+        //create an empty json obj
+        $responseData = json_encode((object)null);
+        $paramArray = [];
+
+        if (strtoupper($this->requestMethod) == $actionType) {
+            try {
+                foreach ($params as $paramName) {
+                    $paramArray[$paramName] = $this->getQueryParams($paramName);
+                }
+
+                $affected_rows = $this->model->$funcName($paramArray);
+                $responseData = json_encode(array("affected_rows" => $affected_rows));
             } catch (Error $e) {
                 echo $e;
                 exit;

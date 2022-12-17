@@ -8,6 +8,7 @@ class DefaultController extends BaseController
         $this->model = new DefaultModel();
         $this->requestMethod = $_SERVER["REQUEST_METHOD"];
         $this->arrQueryStringParams = $this->getQueryStringParams();
+        $this->strErrorDesc = '';
     }
 
     /**
@@ -41,5 +42,13 @@ class DefaultController extends BaseController
     public function getAllSets()
     {
         $this->sendResponse($this->getAction([], "getAllSets"));
+    }
+
+    /**
+     * insert an entry into set
+     */
+    public function postEntryIntoSet()
+    {
+        $this->sendResponse($this->changeAction(["entryTerm", "entryDefinition", "setId"], "insertEntryIntoSet", "POST"));
     }
 }
