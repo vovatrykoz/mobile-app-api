@@ -51,4 +51,20 @@ class DefaultController extends BaseController
     {
         $this->sendResponse($this->changeAction(["entryTerm", "entryDefinition", "setId"], "insertEntryIntoSet", "POST"));
     }
+
+    /**
+     * delete an entry from a set
+     */
+    public function deleteEntryFromSet()
+    {
+        $this->sendResponse($this->changeAction(["entryId"], "deleteEntryFromSet", "DELETE"));
+    }
+
+    /**
+     * delete an entry from a set
+     */
+    public function updateEntry()
+    {
+        $this->sendResponse($this->changeAction(["entryId", "entryTerm", "entryDefinition"], "updateEntry", "PUT"));
+    }
 }

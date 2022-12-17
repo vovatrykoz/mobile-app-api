@@ -70,4 +70,38 @@ class DefaultModel extends Database
             $outParams
         );
     }
+
+    public function updateEntry($inParams)
+    {
+        $outParams = array([
+            'paramType' => "i",
+            'paramValue' => $inParams['entryId']
+        ],
+        [
+            'paramType' => "s",
+            'paramValue' => $inParams['entryTerm']
+        ],
+        [
+            'paramType' => "s",
+            'paramValue' => $inParams['entryDefinition']
+        ],);
+
+        return $this->delete(
+            "CALL usp_update_entry(?, ?, ?);",
+            $outParams
+        );
+    }
+
+    public function deleteEntryFromSet($inParams)
+    {
+        $outParams = array([
+            'paramType' => "i",
+            'paramValue' => $inParams['entryId']
+        ]);
+
+        return $this->delete(
+            "CALL usp_delete_entry_from_set(?);",
+            $outParams
+        );
+    }
 }
