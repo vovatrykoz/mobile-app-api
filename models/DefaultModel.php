@@ -3,6 +3,18 @@ require_once "database.php";
 
 class DefaultModel extends Database
 {
+    public function getUserExists($inParams)
+    {
+        $outParams = array([
+            'paramType' => "i",
+            'paramValue' => $inParams['userId']
+        ]);
+
+        return $this->select(
+            "CALL usp_check_if_username_exists(?);",
+            $outParams
+        );
+    }
 
     public function getUserSets($inParams)
     {
@@ -65,6 +77,36 @@ class DefaultModel extends Database
             "SELECT upload_new_set(?, ?) AS setId;",
             $outParams
         );;
+    }
+
+    public function updateSet($inParams)
+    {
+        $outParams = array([
+            'paramType' => "s",
+            'paramValue' => $inParams['setName']
+        ],
+        [
+            'paramType' => "i",
+            'paramValue' => $inParams['setId']
+        ]);
+
+        return $this->delete(
+            "CALL usp_update_set(?, ?);",
+            $outParams
+        );
+    }
+
+    public function deleteSet($inParams)
+    {
+        $outParams = array([
+            'paramType' => "i",
+            'paramValue' => $inParams['setId']
+        ]);
+
+        return $this->delete(
+            "CALL usp_delete_set(?);",
+            $outParams
+        );
     }
 
     public function insertEntryIntoSet($inParams)

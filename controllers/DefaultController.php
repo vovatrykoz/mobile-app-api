@@ -14,6 +14,14 @@ class DefaultController extends BaseController
     /**
      * get all the entries in a set
      */
+    public function getUserExists()
+    {
+        $this->sendResponse($this->getAction(["userId"], "getUserExists"));
+    }
+
+    /**
+     * get all the entries in a set
+     */
     public function getEntriesFromSet()
     {
         $this->sendResponse($this->getAction(["setId"], "getEntriesFromSet"));
@@ -44,12 +52,28 @@ class DefaultController extends BaseController
         $this->sendResponse($this->getAction([], "getAllSets"));
     }
 
-     /**
+    /**
      * insert a new set
      */
     public function postSet()
     {
         $this->sendResponse($this->changeAction(["setName", "creatorId"], "insertSet", "POST"));
+    }
+
+    /**
+     * insert a new set
+     */
+    public function updateSet()
+    {
+        $this->sendResponse($this->changeAction(["setName", "setId"], "updateSet", "PUT"));
+    }
+
+    /**
+     * insert a new set
+     */
+    public function deleteSet()
+    {
+        $this->sendResponse($this->changeAction(["setId"], "deleteSet", "DELETE"));
     }
 
     /**
