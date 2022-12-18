@@ -115,8 +115,8 @@ class BaseController
                     $paramArray[$paramName] = $this->getQueryParams($paramName);
                 }
 
-                $affected_rows = $this->model->$funcName($paramArray);
-                $responseData = json_encode(array("affected_rows" => $affected_rows));
+                $affected_rows = $this->model->{$funcName}($paramArray);
+                $responseData = json_encode($affected_rows);
             } catch (Error $e) {
                 echo $e;
                 exit;

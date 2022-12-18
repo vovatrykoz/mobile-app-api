@@ -44,6 +44,14 @@ class DefaultController extends BaseController
         $this->sendResponse($this->getAction([], "getAllSets"));
     }
 
+     /**
+     * insert a new set
+     */
+    public function postSet()
+    {
+        $this->sendResponse($this->changeAction(["setName", "creatorId"], "insertSet", "POST"));
+    }
+
     /**
      * insert an entry into set
      */

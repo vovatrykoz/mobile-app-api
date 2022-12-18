@@ -50,6 +50,23 @@ class DefaultModel extends Database
         );
     }
 
+    public function insertSet($inParams)
+    {
+        $outParams = array([
+            'paramType' => "s",
+            'paramValue' => $inParams['setName']
+        ],
+        [
+            'paramType' => "s",
+            'paramValue' => $inParams['creatorId']
+        ]);
+
+        return $this->select(
+            "SELECT upload_new_set(?, ?) AS setId;",
+            $outParams
+        );;
+    }
+
     public function insertEntryIntoSet($inParams)
     {
         $outParams = array([
