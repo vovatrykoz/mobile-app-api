@@ -14,10 +14,19 @@ class DefaultController extends BaseController
     /**
      * get all the entries in a set
      */
-    public function getUserExists()
+    public function checkUser()
     {
-        $this->sendResponse($this->getAction(["userId"], "getUserExists"));
+        $this->sendResponse($this->getAction(["username", "password"], "checkUser"));
     }
+
+    /**
+     * get all the entries in a set
+     */
+    public function postUser()
+    {
+        $this->sendResponse($this->changeAction(["username", "password"], "insertUser", "POST"));
+    }
+
 
     /**
      * get all the entries in a set
