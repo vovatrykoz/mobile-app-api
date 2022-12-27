@@ -50,10 +50,10 @@ class Chat implements MessageComponentInterface {
         return $code;
     }
 
-    private function broadcastMessage($code, $msg){
+    private function broadcastMessage($id, $code, $msg){
         // Iterate over the clients in the lobby and send the broadcast message
         foreach ($this->lobbies[$code]['clients'] as $client) {
-            $client->send(json_encode(['action'=>'broadcast', 'id'=>0, 'code'=>$code, 'message'=>$msg, 'error'=>false]));
+            $client->send(json_encode(['action'=>'broadcast', 'id'=>$id, 'code'=>$code, 'message'=>$msg, 'error'=>false]));
         }
     }
 
@@ -136,7 +136,7 @@ class Chat implements MessageComponentInterface {
             // Add the connection to the lobby
             $this->lobbies[$code]['clients']->attach($from);
             // Send a message to the client with the lobby code
-            $from->send(json_encode(['action'=>'create', 'id'=>0, 'message'=>"Lobby created with code $code", 'code'=>$code, 'error'=>false]));
+            $from->send(json_encode(['action'=>'create', 'id'=>0, 'code'=>$code, 'message'=>"Lobby created with code $code", 'error'=>false]));
         } 
         //A-Z0-9
         // Check if the message is a command to join a lobby
@@ -146,12 +146,12 @@ class Chat implements MessageComponentInterface {
             if (isset($this->lobbies[$code])) {
                 if($this->lobbies[$code]['clients']->contains($from) || ($this->lobbies[$code]['isClosed'] && $this->lobbies[$code]['waiting_room']->contains($from)))
                 {
-                    $from->send(json_encode(['action'=>'join', 'id'=>0, 'message'=>"You are already registered in this lobby!", 'error'=>true]));
+                    $from->send(json_encode(['action'=>'join', 'id'=>0, 'code'=>$code, 'message'=>"You are already registered in this lobby!", 'error'=>true]));
                     return;
                 }
 
                 if ($this->lobbies[$code]['hasPassword'] && $password !== $this->lobbies[$code]['password']) {
-                    $from->send(json_encode(['action'=>'join', 'id'=>1, 'message'=>"Wrong password", 'error'=>true]));
+                    $from->send(json_encode(['action'=>'join', 'id'=>1, 'code'=>$code, 'message'=>"Wrong password", 'error'=>true]));
                     return;
                 }
 
@@ -163,28 +163,28 @@ class Chat implements MessageComponentInterface {
                     $this->lobbies[$code]['waiting_room']->attach($from);
 
                     // Send a message to the client with the lobby code
-                    $from->send(json_encode(['action'=>'join', 'id'=>0, 'message'=>"You have been placed in queue.", 'error'=>false]));
-                    $this->lobbies[$code]['owner']->send(json_encode(['action'=>'notification', 'id'=>0, 'message'=>"Someone joined the queue!", 'error'=>false]));
+                    $from->send(json_encode(['action'=>'join', 'id'=>0, 'code'=>$code, 'message'=>"You have been placed in queue.", 'error'=>false]));
+                    $this->lobbies[$code]['owner']->send(json_encode(['action'=>'notification', 'id'=>0, 'code'=>$code, 'clientID'=>$from->resourceId, 'message'=>"Someone joined the queue!", 'error'=>false]));
                 }
                 else{
                     // Add the connection to the lobby
                     $this->lobbies[$code]['clients']->attach($from);
 
                     // Send a message to the client with the lobby code
-                    $from->send(json_encode(['action'=>'join', 'id'=>1, 'message'=>"Joined lobby with code $code", 'error'=>false]));
-                    $this->lobbies[$code]['owner']->send(json_encode(['action'=>'notification', 'id'=>1, 'message'=>"Someone joined the lobby!", 'error'=>false]));
+                    $from->send(json_encode(['action'=>'join', 'id'=>1, 'code'=>$code, 'message'=>"Joined lobby with code $code", 'error'=>false]));
+                    $this->lobbies[$code]['owner']->send(json_encode(['action'=>'notification', 'id'=>1, 'code'=>$code, 'clientID'=>$from->resourceId, 'message'=>"Someone joined the lobby!", 'error'=>false]));
                 }
 
 
             } else {
-                $from->send(json_encode(['action'=>'join', 'id'=>2, 'message'=>"Lobby with code $code not found", 'error'=>true]));
+                $from->send(json_encode(['action'=>'join', 'id'=>2, 'code'=>$code, 'message'=>"Lobby with code $code not found", 'error'=>true]));
             }
         }
         // Check if the message is a command to close the lobby
         elseif (preg_match('/^\/close\s+([0-9]{6})$/', $msg, $matches)) {
             $code = $matches[1];
             if (isset($this->lobbies[$code]) && $this->lobbies[$code]['owner'] === $from) {
-                $this->broadcastMessage($code, "Lobby with code $code has been closed!");
+                $this->broadcastMessage(0, $code, "Lobby with code $code has been closed!");
                 // Remove the lobby from the list of lobbies
                 unset($this->lobbies[$code]);
             }
@@ -196,13 +196,13 @@ class Chat implements MessageComponentInterface {
             if(isset($this->lobbies[$code])){
                 if ($this->lobbies[$code]['clients']->contains($from) || ($this->lobbies[$code]['isClosed'] && $this->lobbies[$code]['waiting_room']->contains($from))) {
                     if($this->isAliasInUse($code, $alias)){
-                        $from->send(json_encode(['action'=>'alias', 'id'=>0, 'message'=>"Alias `$alias` already in use!", 'error'=>true]));
+                        $from->send(json_encode(['action'=>'alias', 'id'=>0, 'code'=>$code, 'message'=>"Alias `$alias` already in use!", 'error'=>true]));
                     }
                     else{
                         // Set the alias for the connection
                         $this->lobbies[$code]['aliases'][$from->resourceId] = $alias;
                         // Send a message to the client indicating that the alias has been set
-                        $from->send(json_encode(['action'=>'alias', 'id'=>0, 'message'=>"Your alias has been set to $alias", 'error'=>false]));
+                        $from->send(json_encode(['action'=>'alias', 'id'=>0, 'code'=>$code, 'message'=>"Your alias has been set to $alias", 'error'=>false]));
                         $this->lobbies[$code]['lastActiveTime'] = time();
                     }
                 }
@@ -219,11 +219,11 @@ class Chat implements MessageComponentInterface {
                 $alias = $lobby['aliases'][$from->resourceId] ?? null;
                 if(!isset($alias))
                 {
-                    $from->send(json_encode(['action'=>'risehand', 'id'=>0, 'message'=>"Please set a alias.", 'error'=>true]));
+                    $from->send(json_encode(['action'=>'risehand', 'id'=>0, 'code'=>$code, 'message'=>"Please set a alias.", 'error'=>true]));
                 }
                 else{
-                    $lobby['owner']->send(json_encode(['action'=>'risehand', 'id'=>0, 'user'=>$alias, 'message'=>$message, 'error'=>false]));
-                    $from->send(json_encode(['action'=>'risehand', 'id'=>1, 'message'=>"Success: Your hand is raised!", 'error'=>false]));
+                    $lobby['owner']->send(json_encode(['action'=>'risehand', 'id'=>0, 'code'=>$code, 'userID' => $from->resourceId, 'user'=>$alias, 'message'=>$message, 'error'=>false]));
+                    $from->send(json_encode(['action'=>'risehand', 'id'=>1, 'code'=>$code, 'message'=>"Success: Your hand is raised!", 'error'=>false]));
                     $lobby['lastActiveTime'] = time();
                 }
             }
@@ -237,11 +237,11 @@ class Chat implements MessageComponentInterface {
                 foreach ($this->lobbies[$code]['waiting_room'] as $conn) 
                 {
                     $alias = $this->lobbies[$code]['aliases'][$conn->resourceId] ?? 'unknown';
-                    $queueList[] = ['alias' => $alias, 'conn' => $conn->resourceId];
+                    $queueList[] = ['alias' => $alias, 'connectionID' => $conn->resourceId];
                 }
 
                 // Send the waiting list to the lobby owner
-                $this->lobbies[$code]['owner']->send(json_encode(['action'=>'queue', 'id'=>0, 'list'=>$queueList, 'error'=>false]));
+                $this->lobbies[$code]['owner']->send(json_encode(['action'=>'queue', 'id'=>0, 'code'=>$code, 'list'=>$queueList, 'error'=>false]));
             }
         }
         // Check if the message is a command to check queue of a lobby
@@ -257,7 +257,7 @@ class Chat implements MessageComponentInterface {
                 }
 
                 // Send the waiting list to the lobby owner
-                $this->lobbies[$code]['owner']->send(json_encode(['action'=>'member_list', 'id'=>0, 'list'=>$memberList, 'error'=>false]));
+                $this->lobbies[$code]['owner']->send(json_encode(['action'=>'member_list', 'id'=>0, 'code'=>$code, 'list'=>$memberList, 'error'=>false]));
             }
         }
         // Check if the message is a command to close the lobby
@@ -272,7 +272,7 @@ class Chat implements MessageComponentInterface {
                         $this->lobbies[$code]['clients']->attach($conn);
                         $this->lobbies[$code]['waiting_room']->detach($conn);
 
-                        $this->lobbies[$code]['owner']->send(json_encode(['action'=>'accept', 'id'=>0, 'message' => "$connectionID has been added!", 'error'=>false]));
+                        $this->lobbies[$code]['owner']->send(json_encode(['action'=>'accept', 'id'=>0, 'code'=>$code, 'message' => "$connectionID has been added!", 'error'=>false]));
                         break;
                     }
 
