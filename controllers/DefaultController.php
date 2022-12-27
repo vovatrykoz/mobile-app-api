@@ -66,7 +66,7 @@ class DefaultController extends BaseController
      */
     public function postSet()
     {
-        $this->sendResponse($this->changeAction(["setName", "creatorId"], "insertSet", "POST"));
+        $this->sendResponse($this->changeAction(["setName", "creatorId", "setSubject"], "insertSet", "POST"));
     }
 
     /**
@@ -74,7 +74,7 @@ class DefaultController extends BaseController
      */
     public function updateSet()
     {
-        $this->sendResponse($this->changeAction(["setName", "setId"], "updateSet", "PUT"));
+        $this->sendResponse($this->changeAction(["setName", "setId", "setSubject"], "updateSet", "PUT"));
     }
 
     /**

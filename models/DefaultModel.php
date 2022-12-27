@@ -5,14 +5,16 @@ class DefaultModel extends Database
 {
     public function checkUser($inParams)
     {
-        $outParams = array([
-            'paramType' => "s",
-            'paramValue' => $inParams['username']
-        ],
-        [
-            'paramType' => "s",
-            'paramValue' => $inParams['password']
-        ]);
+        $outParams = array(
+            [
+                'paramType' => "s",
+                'paramValue' => $inParams['username']
+            ],
+            [
+                'paramType' => "s",
+                'paramValue' => $inParams['password']
+            ]
+        );
 
         return $this->select(
             "CALL usp_check_if_user_exists(?, ?);",
@@ -22,14 +24,16 @@ class DefaultModel extends Database
 
     public function insertUser($inParams)
     {
-        $outParams = array([
-            'paramType' => "s",
-            'paramValue' => $inParams['username']
-        ],
-        [
-            'paramType' => "s",
-            'paramValue' => $inParams['password']
-        ]);
+        $outParams = array(
+            [
+                'paramType' => "s",
+                'paramValue' => $inParams['username']
+            ],
+            [
+                'paramType' => "s",
+                'paramValue' => $inParams['password']
+            ]
+        );
 
         return $this->select(
             "SELECT insert_new_user(?, ?) AS userId;",
@@ -85,34 +89,46 @@ class DefaultModel extends Database
 
     public function insertSet($inParams)
     {
-        $outParams = array([
-            'paramType' => "s",
-            'paramValue' => $inParams['setName']
-        ],
-        [
-            'paramType' => "s",
-            'paramValue' => $inParams['creatorId']
-        ]);
+        $outParams = array(
+            [
+                'paramType' => "s",
+                'paramValue' => $inParams['setName']
+            ],
+            [
+                'paramType' => "s",
+                'paramValue' => $inParams['creatorId']
+            ],
+            [
+                'paramType' => "s",
+                'paramValue' => $inParams['setSubject']
+            ],
+        );
 
         return $this->select(
-            "SELECT upload_new_set(?, ?) AS setId;",
+            "SELECT upload_new_set(?, ?, ?) AS setId;",
             $outParams
-        );;
+        );
     }
 
     public function updateSet($inParams)
     {
-        $outParams = array([
-            'paramType' => "s",
-            'paramValue' => $inParams['setName']
-        ],
-        [
-            'paramType' => "i",
-            'paramValue' => $inParams['setId']
-        ]);
+        $outParams = array(
+            [
+                'paramType' => "s",
+                'paramValue' => $inParams['setName']
+            ],
+            [
+                'paramType' => "i",
+                'paramValue' => $inParams['setId']
+            ],
+            [
+                'paramType' => "s",
+                'paramValue' => $inParams['setSubject']
+            ],
+        );
 
         return $this->delete(
-            "CALL usp_update_set(?, ?);",
+            "CALL usp_update_set(?, ?, ?);",
             $outParams
         );
     }
@@ -132,18 +148,20 @@ class DefaultModel extends Database
 
     public function insertEntryIntoSet($inParams)
     {
-        $outParams = array([
-            'paramType' => "s",
-            'paramValue' => $inParams['entryTerm']
-        ],
-        [
-            'paramType' => "s",
-            'paramValue' => $inParams['entryDefinition']
-        ],
-        [
-            'paramType' => "i",
-            'paramValue' => $inParams['setId']
-        ]);
+        $outParams = array(
+            [
+                'paramType' => "s",
+                'paramValue' => $inParams['entryTerm']
+            ],
+            [
+                'paramType' => "s",
+                'paramValue' => $inParams['entryDefinition']
+            ],
+            [
+                'paramType' => "i",
+                'paramValue' => $inParams['setId']
+            ]
+        );
 
         return $this->insert(
             "CALL usp_insert_entry_into_set(?, ?, ?);",
@@ -153,18 +171,20 @@ class DefaultModel extends Database
 
     public function updateEntry($inParams)
     {
-        $outParams = array([
-            'paramType' => "i",
-            'paramValue' => $inParams['entryId']
-        ],
-        [
-            'paramType' => "s",
-            'paramValue' => $inParams['entryTerm']
-        ],
-        [
-            'paramType' => "s",
-            'paramValue' => $inParams['entryDefinition']
-        ],);
+        $outParams = array(
+            [
+                'paramType' => "i",
+                'paramValue' => $inParams['entryId']
+            ],
+            [
+                'paramType' => "s",
+                'paramValue' => $inParams['entryTerm']
+            ],
+            [
+                'paramType' => "s",
+                'paramValue' => $inParams['entryDefinition']
+            ],
+        );
 
         return $this->delete(
             "CALL usp_update_entry(?, ?, ?);",
