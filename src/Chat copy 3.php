@@ -226,21 +226,10 @@ class Chat implements MessageComponentInterface {
                     $from->send(json_encode(['action'=>'risehand', 'id'=>0, 'code'=>$code, 'message'=>"Please set a alias.", 'error'=>true]));
                 }
                 else{
-                    $metadata = array('userID'=>$from->resourceId, 'alias'=>$alias, 'message'=>$message);
-                    $this->lobbies[$code]['risedHands'][$from->resourceId] = $metadata;
-                    $lobby['owner']->send(json_encode(['action'=>'risehand', 'id'=>0, 'code'=>$code, 'metadata'=>$metadata, 'error'=>false]));
+                    $lobby['owner']->send(json_encode(['action'=>'risehand', 'id'=>0, 'code'=>$code, 'userID' => $from->resourceId, 'user'=>$alias, 'message'=>$message, 'error'=>false]));
                     $from->send(json_encode(['action'=>'risehand', 'id'=>1, 'code'=>$code, 'message'=>"Success: Your hand is raised!", 'error'=>false]));
                     $lobby['lastActiveTime'] = time();
                 }
-            }
-        }
-        elseif(preg_match('/^\/lowerhand\s+([0-9]{6})$/', $msg, $matches)){
-            $code = $matches[1];
-
-            if ($this->isValidMember($code, $from) && isset($this->lobbies[$code]['risedHands'][$from->resourceId])) {
-                unset($this->lobbies[$code]['risedHands'][$from->resourceId]);
-                $this->lobbies[$code]['owner']->send(json_encode(['action'=>'lowerhand', 'id'=>0, 'code'=>$code, 'userID'=>$from->resourceId, 'message'=>"Someone just lowered their hand!", 'error'=>false]));
-                $from->send(json_encode(['action'=>'lowerhand', 'id'=>1, 'code'=>$code, 'message'=>"Success: Your hand is lowered!", 'error'=>false]));
             }
         }
         // Check if the message is a command to check queue of a lobby
