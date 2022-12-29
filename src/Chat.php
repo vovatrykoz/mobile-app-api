@@ -11,6 +11,7 @@ use Ratchet\Server\IoServer;
 use Ratchet\Http\HttpServer;
 use Ratchet\WebSocket\WsServer;
 
+
 // Create a class that implements the MessageComponentInterface
 class Chat implements MessageComponentInterface {
     // Set the maximum inactive time for a lobby to 24 hours
@@ -21,29 +22,6 @@ class Chat implements MessageComponentInterface {
     public function __construct() {
         $this->lobbies = [];
     }
-    
-
-    /*
-    //Make sure to update the regex when modifying
-    private function generateLobbyCode(){
-        $code = null;
-        while (true) {
-            $shuffle_string = substr(str_shuffle("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"), 0, 6);
-            $code = "";
-            
-            for($x = 0; $x < 6; $x++)
-            {
-                $code .= $shuffle_string[random_int(0, strlen($shuffle_string)-1)];
-            }
-
-            if (!isset($this->lobbies[$code])) {
-                break;
-            }
-        }
-        return $code;
-    }
-    */
-
     private function generateLobbyCode(){
         $code = null;
         do{
@@ -57,6 +35,13 @@ class Chat implements MessageComponentInterface {
         // Iterate over the clients in the lobby and send the broadcast message
         foreach ($this->lobbies[$code]['clients'] as $client) {
             $client->send(json_encode(['action'=>'broadcast', 'id'=>$id, 'code'=>$code, 'message'=>$msg, 'error'=>false]));
+        }
+
+        if($this->lobbies[$code]['isClosed'] === true)
+        {
+            foreach ($this->lobbies[$code]['waiting_room'] as $client) {
+                $client->send(json_encode(['action'=>'broadcast', 'id'=>$id, 'code'=>$code, 'message'=>$msg, 'error'=>false]));
+            }
         }
     }
 
@@ -103,6 +88,28 @@ class Chat implements MessageComponentInterface {
         echo "New connection! ({$conn->resourceId})\n";
     }
 
+    //Maybe remove lobby is user is owner
+    public function onClose(ConnectionInterface $conn) {
+        // Check all lobbies for the disconnected client
+        foreach ($this->lobbies as $code => $lobby) {
+            // Remove the client from the lobby if it is a member
+            if ($lobby['clients']->contains($conn)) {
+                $lobby['clients']->detach($conn);
+                break;
+            }
+            // Remove the client from the waiting room if it is a member
+            if ($lobby['isClosed'] && $lobby['waiting_room']->contains($conn)) {
+                $lobby['waiting_room']->detach($conn);
+                break;
+            }
+        }
+        echo "Connection {$conn->resourceId} has disconnected\n";
+    }
+    
+    public function onError(ConnectionInterface $connection, \Exception $e){
+        echo "ERROR OCCURED: " . $e;
+    }
+    
     public function onMessage(ConnectionInterface $from, $msg) {
 
         // Check if the message is a command to create a new lobby with a password if set
@@ -281,7 +288,7 @@ class Chat implements MessageComponentInterface {
                 foreach ($this->lobbies[$code]['waiting_room'] as $conn) 
                 {
                     $alias = $this->lobbies[$code]['aliases'][$conn->resourceId] ?? 'unknown';
-                    $queueList[] = ['alias' => $alias, 'connectionID' => $conn->resourceId];
+                    $queueList[] = ['alias' => $alias, 'user_type' => ($conn === $this->lobbies[$code]['owner']) ? 'owner' : 'member', 'connectionID' => $conn->resourceId];
                 }
 
                 // Send the waiting list to the lobby owner
@@ -304,7 +311,7 @@ class Chat implements MessageComponentInterface {
                 $this->lobbies[$code]['owner']->send(json_encode(['action'=>'member_list', 'id'=>0, 'code'=>$code, 'list'=>$memberList, 'error'=>false]));
             }
         }
-        // Check if the message is a command to close the lobby
+        // Check if the message is a command to accept member in queue
         elseif (preg_match('/^\/accept\s+([0-9]{6})(?:\s+(\d+))$/', $msg, $matches)) {
             $code = $matches[1];
             $connectionID = $matches[2];
@@ -316,7 +323,9 @@ class Chat implements MessageComponentInterface {
                         $this->lobbies[$code]['clients']->attach($conn);
                         $this->lobbies[$code]['waiting_room']->detach($conn);
 
-                        $this->lobbies[$code]['owner']->send(json_encode(['action'=>'accept', 'id'=>0, 'code'=>$code, 'userID' => $connectionID, 'message' => "$connectionID has been added!", 'error'=>false]));
+                        $conn->send(json_encode(['action'=>'accept', 'id'=>0, 'code'=>$code, 'message' => "You have been added as a member!", 'error'=>false]));
+                        $this->lobbies[$code]['owner']->send(json_encode(['action'=>'accept', 'id'=>1, 'code'=>$code, 'userID' => $connectionID, 'message' => "$connectionID has been added!", 'error'=>false]));
+
                         break;
                     }
 
@@ -327,34 +336,7 @@ class Chat implements MessageComponentInterface {
         }
     }
 
-
-    public function onClose(ConnectionInterface $conn) {
-        // Remove the client from any lobbies they might be in
-        foreach ($this->lobbies as $code => $lobby) {
-            if ($lobby['isClosed']) {
-                // Check if the connection is in the lobby
-                if ($lobby['waiting_room']->contains($conn)) {
-                    // Remove the connection from the lobby
-                    $lobby['waiting_room']->detach($conn);
-                }
-            } else {
-                // Check if the connection is in the lobby
-                if ($lobby['clients']->contains($conn)) {
-                    // Remove the connection from the lobby
-                    $lobby['clients']->detach($conn);
-                }
-            }
-        }
-
-        echo "Connection {$conn->resourceId} has disconnected\n";
-    }
   
-    public function onError(ConnectionInterface $conn, \Exception $e) {
-        echo "An error has occurred: {$e->getMessage()}\n";
-  
-        $conn->close();
-    }
-
     // Create a function to remove inactive lobbies
     public function removeInactiveLobbies() {
         echo "Clearing inactive lobbies\n";
