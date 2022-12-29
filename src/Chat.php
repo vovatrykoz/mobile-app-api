@@ -1,4 +1,7 @@
 <?php
+/*
+    TODO: Prob check and replace SplObjectStorage with associated array
+*/
 namespace MyApp;
 
 // Include the Ratchet library
@@ -234,14 +237,40 @@ class Chat implements MessageComponentInterface {
                 }
             }
         }
-        elseif(preg_match('/^\/lowerhand\s+([0-9]{6})$/', $msg, $matches)){
+        elseif(preg_match('/^\/lowerhand\s+([0-9]{6})(?:\s+(\d+))?$/', $msg, $matches)){
             $code = $matches[1];
+            $userID = isset($matches[2]) ? (int)$matches[2] : $from->resourceId;
 
-            if ($this->isValidMember($code, $from) && isset($this->lobbies[$code]['risedHands'][$from->resourceId])) {
-                unset($this->lobbies[$code]['risedHands'][$from->resourceId]);
-                $this->lobbies[$code]['owner']->send(json_encode(['action'=>'lowerhand', 'id'=>0, 'code'=>$code, 'userID'=>$from->resourceId, 'message'=>"Someone just lowered their hand!", 'error'=>false]));
-                $from->send(json_encode(['action'=>'lowerhand', 'id'=>1, 'code'=>$code, 'message'=>"Success: Your hand is lowered!", 'error'=>false]));
+            if ($this->isValidMember($code, $from) && isset($this->lobbies[$code]['risedHands'][$userID])){
+                
+                //isset($this->lobbies[$code]['risedHands'][$userID])
+                if(isset($matches[2]))
+                {
+
+                    if($this->lobbies[$code]['owner'] === $from){
+                        unset($this->lobbies[$code]['risedHands'][$userID]);
+                        $this->lobbies[$code]['owner']->send(json_encode(['action'=>'lowerhand', 'id'=>0, 'code'=>$code, 'userID'=>$userID, 'message'=>"Hand lowered successfully!", 'error'=>false]));
+                        //User might have left the lobby since then
+                        foreach ($this->lobbies[$code]['clients'] as $currentConn) {
+                            if ($currentConn->resourceId === $userID) {
+                                $currentConn->send(json_encode(['action'=>'lowerhand', 'id'=>1, 'code'=>$code, 'message'=>"Your hand have been lowered!", 'error'=>false]));
+                                break;
+                            }
+                        }
+                    }
+                    else{
+                        //...
+                    }
+                }
+                else{
+                    unset($this->lobbies[$code]['risedHands'][$userID]);
+                    $this->lobbies[$code]['owner']->send(json_encode(['action'=>'lowerhand', 'id'=>2, 'code'=>$code, 'userID'=>$userID, 'message'=>"Someone just lowered their hand!", 'error'=>false]));
+                    $from->send(json_encode(['action'=>'lowerhand', 'id'=>3, 'code'=>$code, 'message'=>"Success: Your hand is lowered!", 'error'=>false]));
+
+                }
+
             }
+
         }
         // Check if the message is a command to check queue of a lobby
         elseif (preg_match('/^\/queue\s+([0-9]{6})$/', $msg, $matches)) {
