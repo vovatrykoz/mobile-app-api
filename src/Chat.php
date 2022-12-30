@@ -10,18 +10,23 @@ use Ratchet\ConnectionInterface;
 use Ratchet\Server\IoServer;
 use Ratchet\Http\HttpServer;
 use Ratchet\WebSocket\WsServer;
+use Ratchet\WebSocket\WsConnection;
 
 
 // Create a class that implements the MessageComponentInterface
 class Chat implements MessageComponentInterface {
     // Set the maximum inactive time for a lobby to 24 hours
     const MAX_INACTIVE_TIME = 86400;
+    const MAX_FAILURE_COUNT = 3;
 
     protected $lobbies;
+    protected $connections;
     
     public function __construct() {
         $this->lobbies = [];
+        $this->connections = new \SplObjectStorage;
     }
+
     private function generateLobbyCode(){
         $code = null;
         do{
@@ -70,9 +75,24 @@ class Chat implements MessageComponentInterface {
         return false;
     }
 
-  
+    protected function removeClientFromLobby(ConnectionInterface $conn) {
+        // Iterate over all lobbies and remove the client if it is a member
+        foreach ($this->lobbies as $code => $lobby) {
+            if ($lobby['clients']->contains($conn)) {
+                $lobby['clients']->detach($conn);
+                break;
+            }
+            // Remove the client from the waiting room if it is a member
+            if ($lobby['isClosed'] && $lobby['waiting_room']->contains($conn)) {
+                $lobby['waiting_room']->detach($conn);
+                break;
+            }
+        }
+    }
+
     public function onOpen(ConnectionInterface $conn) {
         $lobbyCodes = [];
+        $this->connections->attach($conn);
 
         // onOpen is also called when an existing connection is reestablished after being lost.
         foreach ($this->lobbies as $code => $lobby) {
@@ -84,34 +104,31 @@ class Chat implements MessageComponentInterface {
             }
         }
 
+        //Setting the heartbeat response variable that will be used to indicate the client is still responsive.
+        $conn->heartbeatResponse = true;
+        $conn->failureCount = 0;
+
         $conn->send(json_encode(['action'=>'init', 'id'=>0, 'previous'=>$lobbyCodes, 'error'=>false]));
         echo "New connection! ({$conn->resourceId})\n";
     }
 
     //Maybe remove lobby is user is owner
     public function onClose(ConnectionInterface $conn) {
-        // Check all lobbies for the disconnected client
-        foreach ($this->lobbies as $code => $lobby) {
-            // Remove the client from the lobby if it is a member
-            if ($lobby['clients']->contains($conn)) {
-                $lobby['clients']->detach($conn);
-                break;
-            }
-            // Remove the client from the waiting room if it is a member
-            if ($lobby['isClosed'] && $lobby['waiting_room']->contains($conn)) {
-                $lobby['waiting_room']->detach($conn);
-                break;
-            }
-        }
+        echo "ONCLOSE\n";
+
+        $this->removeClientFromLobby($conn);
+        $this->connections->detach($conn);
+
         echo "Connection {$conn->resourceId} has disconnected\n";
     }
     
     public function onError(ConnectionInterface $connection, \Exception $e){
+        echo "ONERROR\n";
         echo "ERROR OCCURED: " . $e;
     }
     
     public function onMessage(ConnectionInterface $from, $msg) {
-
+        $from->heartbeatResponse = true;
         // Check if the message is a command to create a new lobby with a password if set
         if (preg_match('/^\/(create|closed_create)(?:\s+(.+))?/', $msg, $matches)) {
             // Generate a random 6-digit code if none is provided
@@ -344,6 +361,45 @@ class Chat implements MessageComponentInterface {
         foreach ($this->lobbies as $code => $lobby) {
             if (time() - $lobby['lastActiveTime'] > self::MAX_INACTIVE_TIME) {
                 unset($this->lobbies[$code]);
+            }
+        }
+    }
+
+    // Create a function to implement simple heartbeat to remove old connections (failed to close correctly)
+    public function heartbeat() {
+        echo "heartbeat to remove old connections\n";
+        // Iterate over the lobbies and remove those that have been inactive for more than MAX_INACTIVE_TIME
+        foreach ($this->connections as $index => $conn) {
+            if (!isset($conn->heartbeatResponse)) {
+                echo "heartbeat response not set! (hmm)\n";
+                $conn->heartbeatResponse = true;
+                continue;
+            }
+
+            //The client responded to the heartbeat! keep it alive
+            if($conn->heartbeatResponse === true)
+            {
+                $conn->heartbeatResponse = false;
+                $conn->failureCount = 0;
+                $conn->send("ping");
+            }
+            //The client didn't respond to the last heartbeat!
+            else
+            {
+                if($conn->failureCount >= self::MAX_FAILURE_COUNT)
+                {
+                    echo "Connection is getting closed!";
+                    //Close the connection
+                    $this->removeClientFromLobby($conn);
+                    $this->connections->detach($conn);
+                    $conn->close();
+                    
+                }
+                else
+                {
+                    $conn->failureCount++;
+                    $conn->send("ping");
+                }
             }
         }
     }

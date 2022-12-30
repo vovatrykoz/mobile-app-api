@@ -9,19 +9,23 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 
 $chat = new Chat();
 
+$wsServer = new Ratchet\WebSocket\WsServer($chat);
+
 $server = IoServer::factory(
     new HttpServer(
-        new WsServer(
-            $chat
-        )
+        $wsServer
     ),
     8080
 );
 
 
-
 $server->loop->addPeriodicTimer(60, function () use ($chat) {
     $chat->removeInactiveLobbies();
 });
+
+$server->loop->addPeriodicTimer(60, function () use ($chat) {
+    $chat->heartbeat();
+});
+
 
 $server->run();
