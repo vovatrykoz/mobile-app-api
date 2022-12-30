@@ -80,13 +80,17 @@ class Chat implements MessageComponentInterface {
         foreach ($this->lobbies as $code => $lobby) {
             if ($lobby['clients']->contains($conn)) {
                 $lobby['clients']->detach($conn);
-                break;
+                //Notifying the lobby owner that someone left the lobby.
+                $this->lobbies[$code]['owner']->send(json_encode(['action'=>'left', 'id'=>0, 'code'=>$code, 'clientID'=>$conn->resourceId, 'message'=>"Someone left the lobby!", 'error'=>false]));
             }
             // Remove the client from the waiting room if it is a member
-            if ($lobby['isClosed'] && $lobby['waiting_room']->contains($conn)) {
+            else if ($lobby['isClosed'] && $lobby['waiting_room']->contains($conn)) {
                 $lobby['waiting_room']->detach($conn);
-                break;
+                //Notifying the lobby owner that someone left the que.
+                $this->lobbies[$code]['owner']->send(json_encode(['action'=>'left', 'id'=>1, 'code'=>$code, 'clientID'=>$conn->resourceId, 'message'=>"Someone left the queue!", 'error'=>false]));
             }
+
+
         }
     }
 
@@ -114,8 +118,6 @@ class Chat implements MessageComponentInterface {
 
     //Maybe remove lobby is user is owner
     public function onClose(ConnectionInterface $conn) {
-        echo "ONCLOSE\n";
-
         $this->removeClientFromLobby($conn);
         $this->connections->detach($conn);
 
