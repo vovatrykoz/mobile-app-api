@@ -171,9 +171,10 @@ class Chat implements MessageComponentInterface {
         } 
         //A-Z0-9
         // Check if the message is a command to join a lobby
-        elseif (preg_match('/^\/join\s+([0-9]{6})(?:\s+(.+))?$/', $msg, $matches)) {
+        elseif (preg_match('/^\/join\s+([0-9]{6})\s*(?:\s+(.+))?$/', $msg, $matches)) {
             $code = $matches[1];
             $password = $matches[2] ?? null;
+
             if (isset($this->lobbies[$code])) {
                 if($this->lobbies[$code]['clients']->contains($from) || ($this->lobbies[$code]['isClosed'] && $this->lobbies[$code]['waiting_room']->contains($from)))
                 {
