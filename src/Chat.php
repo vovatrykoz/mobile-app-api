@@ -234,7 +234,7 @@ class Chat implements MessageComponentInterface {
                         // Set the alias for the connection
                         $this->lobbies[$code]['aliases'][$from->resourceId] = $alias;
                         // Send a message to the client indicating that the alias has been set
-                        $from->send(json_encode(['action'=>'alias', 'id'=>0, 'code'=>$code, 'message'=>"Your alias has been set to $alias", 'error'=>false]));
+                        $from->send(json_encode(['action'=>'alias', 'id'=>0, 'code'=>$code, 'alias'=>$alias, 'message'=>"Your alias has been set to $alias", 'error'=>false]));
                         $this->lobbies[$code]['owner']->send(json_encode(['action'=>'alias', 'id'=>1, 'code'=>$code, 'userID' => $from->resourceId, 'user'=>$alias, 'message'=>'Alias has been updated!', 'error'=>false]));
 
                         $this->lobbies[$code]['lastActiveTime'] = time();
