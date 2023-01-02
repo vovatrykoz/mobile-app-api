@@ -214,9 +214,10 @@ class Chat implements MessageComponentInterface {
             // Check if the message is a command to join a lobby
             case 'join':
                 {
-                    $code = $data->code;
-                    if($code === null || is_string($code) == false || $this->isValidCode($code) == false)
+                    if(isset($data->code) == false || is_string($data->code) == false || $this->isValidCode($data->code) == false)
                         return;
+                    $code = $data->code;
+
                     $password = (isset($data->password) && is_string($data->password)) ? $data->password : null;
                     $alias = (isset($data->alias) && is_string($data->alias)) ? $data->alias : null;
 
@@ -265,9 +266,10 @@ class Chat implements MessageComponentInterface {
                 // Check if the message is a command to close the lobby
                 case 'close':
                     {
-                        $code = $data->code;
-                        if($code === null || is_string($code) == false || $this->isValidCode($code) == false)
+                        if(isset($data->code) == false || is_string($data->code) == false || $this->isValidCode($data->code) == false)
                             return;
+                        $code = $data->code;
+
                         if (isset($this->lobbies[$code]) && $this->lobbies[$code]['owner'] === $from) {
                             $this->broadcastMessage(0, $code, "Lobby with code $code has been closed!");
                             // Remove the lobby from the list of lobbies
@@ -277,20 +279,23 @@ class Chat implements MessageComponentInterface {
                 // Check if the message is a command to set the alias
                 case 'setalias':
                     {
-                        $code = $data->code;
-                        $alias = (isset($data->alias) && is_string($data->alias)) ? $data->alias : null;
-                        if(($code === null || $alias === null) || $this->isValidCode($code) == false)
+                        if(isset($data->code) == false || is_string($data->code) == false || $this->isValidCode($data->code) == false)
                             return;
+                        if(isset($data->alias) == false || is_string($data->alias) == false)
+                            return;
+                            
+                        $code = $data->code;
+                        $alias = $data->alias;
 
                         $this->setAlias($code, $alias, $from);
                         break;
                     }
                 case 'risehand':
                     {
+                        if(isset($data->code) == false || is_string($data->code) == false || $this->isValidCode($data->code) == false)
+                            return;
                         $code = $data->code;
                         $message = (isset($data->message) && is_string($data->message)) ? $data->message : '';
-                        if($code === null || is_string($code) == false || $this->isValidCode($code) == false)
-                            return;
 
                         //If the user is a member of the lobby
                         if ($this->isValidMember($code, $from)) {
@@ -312,18 +317,17 @@ class Chat implements MessageComponentInterface {
                     }
                 case 'lowerhand':
                     {
+                        if(isset($data->code) == false || is_string($data->code) == false || $this->isValidCode($data->code) == false)
+                            return;
                         $code = $data->code;
 
-                        $userIDSet = isset($data->userID) && is_numeric($data->userID);
-                        $userID = ($userIDSet) ? (int)$data->userID : $from->resourceId;
-                        if($code === null || is_string($code) == false || $this->isValidCode($code) == false)
-                            return;
+                        $isUserIDSet = (isset($data->userID) && is_numeric($data->userID));
+                        $userID = ($isUserIDSet) ? (int)$data->userID : $from->resourceId;
 
-                        echo $userID;
                         if ($this->isValidMember($code, $from) && isset($this->lobbies[$code]['risedHands'][$userID])){
                             
                             //isset($this->lobbies[$code]['risedHands'][$userID])
-                            if($userIDSet)
+                            if($isUserIDSet)
                             {
             
                                 if($this->lobbies[$code]['owner'] === $from){
@@ -353,9 +357,9 @@ class Chat implements MessageComponentInterface {
                     }
                 case 'queue':
                     {
-                        $code = $data->code;
-                        if($code === null || is_string($code) == false || $this->isValidCode($code) == false)
+                        if(isset($data->code) == false || is_string($data->code) == false || $this->isValidCode($data->code) == false)
                             return;
+                        $code = $data->code;
 
                         if (isset($this->lobbies[$code]) && $this->lobbies[$code]['isClosed'] && $this->lobbies[$code]['owner'] === $from) {
                             $queueList = [];
@@ -374,9 +378,9 @@ class Chat implements MessageComponentInterface {
                 // Check if the message is a command to check queue of a lobby
                 case 'members':
                     {
-                        $code = $data->code;
-                        if($code === null || is_string($code) == false || $this->isValidCode($code) == false)
+                        if(isset($data->code) == false || is_string($data->code) == false || $this->isValidCode($data->code) == false)
                             return;
+                        $code = $data->code;
 
                         if (isset($this->lobbies[$code]) && $this->lobbies[$code]['owner'] === $from) {
                             $memberList = [];
@@ -395,11 +399,14 @@ class Chat implements MessageComponentInterface {
                 // Check if the message is a command to accept member in queue
                 case 'accept':
                     {
+                        if(isset($data->code) == false || is_string($data->code) == false || $this->isValidCode($data->code) == false)
+                            return;
+                        if(isset($data->userID) == false || is_numeric($data->userID) == false)
+                            return;
 
                         $code = $data->code;
                         $connectionID = $data->userID;
-                        if(($code === null || $connectionID === null) || $this->isValidCode($code) == false || is_numeric($connectionID) == false)
-                            return;
+
 
                         if (isset($this->lobbies[$code]) && $this->lobbies[$code]['isClosed'] && $this->lobbies[$code]['owner'] === $from) {
                             foreach ($this->lobbies[$code]['waiting_room'] as $index => $conn) 
