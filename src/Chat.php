@@ -314,14 +314,16 @@ class Chat implements MessageComponentInterface {
                     {
                         $code = $data->code;
 
-                        $userID = (isset($data->userID) && is_numeric($data->userID)) ? (int)$data->userID : $from->resourceId;
+                        $userIDSet = isset($data->userID) && is_numeric($data->userID);
+                        $userID = ($userIDSet) ? (int)$data->userID : $from->resourceId;
                         if($code === null || is_string($code) == false || $this->isValidCode($code) == false)
                             return;
 
+                        echo $userID;
                         if ($this->isValidMember($code, $from) && isset($this->lobbies[$code]['risedHands'][$userID])){
                             
                             //isset($this->lobbies[$code]['risedHands'][$userID])
-                            if(isset($matches[2]))
+                            if($userIDSet)
                             {
             
                                 if($this->lobbies[$code]['owner'] === $from){
@@ -396,7 +398,7 @@ class Chat implements MessageComponentInterface {
 
                         $code = $data->code;
                         $connectionID = $data->userID;
-                        if(($code === null || $connectionID === null) || $this->isValidCode($code) == false || $this->is_numeric($connectionID) == false)
+                        if(($code === null || $connectionID === null) || $this->isValidCode($code) == false || is_numeric($connectionID) == false)
                             return;
 
                         if (isset($this->lobbies[$code]) && $this->lobbies[$code]['isClosed'] && $this->lobbies[$code]['owner'] === $from) {
