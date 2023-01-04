@@ -428,7 +428,7 @@ class Chat implements MessageComponentInterface {
                         }
                         break;
                     }
-                case 'decline':
+                case 'remove':
                     {
                         if(isset($data->code) == false || is_string($data->code) == false || $this->isValidCode($data->code) == false)
                             return;
@@ -438,20 +438,41 @@ class Chat implements MessageComponentInterface {
                         $code = $data->code;
                         $connectionID = $data->userID;
 
-                        if (isset($this->lobbies[$code]) && $this->lobbies[$code]['isClosed'] && $this->lobbies[$code]['owner'] === $from) {
-                            foreach ($this->lobbies[$code]['waiting_room'] as $index => $conn) 
+                        if (isset($this->lobbies[$code]) && $this->lobbies[$code]['owner'] === $from) {
+                            $isRemoved = false;
+
+                            foreach ($this->lobbies[$code]['clients'] as $index => $conn) 
                             {
                                 //Two equal-signs, will automatically make the two operands the same type.
                                 if ($conn->resourceId == $connectionID) {
-                                    $this->lobbies[$code]['waiting_room']->detach($conn);
-            
-                                    $conn->send(json_encode(['action'=>'decline', 'id'=>0, 'code'=>$code, 'message' => "You have been removed from queue!", 'error'=>false]));
-                                    $this->lobbies[$code]['owner']->send(json_encode(['action'=>'decline', 'id'=>1, 'code'=>$code, 'userID' => $connectionID, 'message' => "$connectionID has been removed from queue!", 'error'=>false]));
+                                    $this->lobbies[$code]['clients']->detach($conn);
+                                    $isRemoved = true;
+
+                                    $conn->send(json_encode(['action'=>'remove', 'id'=>0, 'code'=>$code, 'message' => "You have been removed from lobby!", 'error'=>false]));
+                                    $this->lobbies[$code]['owner']->send(json_encode(['action'=>'remove', 'id'=>1, 'code'=>$code, 'userID' => $connectionID, 'message' => "$connectionID has been removed from lobby!", 'error'=>false]));
             
                                     break;
                                 }
             
                             }
+
+                            if($isRemoved === false && $this->lobbies[$code]['isClosed'])
+                            {
+                                foreach ($this->lobbies[$code]['waiting_room'] as $index => $conn) 
+                                {
+                                    //Two equal-signs, will automatically make the two operands the same type.
+                                    if ($conn->resourceId == $connectionID) {
+                                        $this->lobbies[$code]['waiting_room']->detach($conn);
+                
+                                        $conn->send(json_encode(['action'=>'remove', 'id'=>2, 'code'=>$code, 'message' => "You have been removed from queue!", 'error'=>false]));
+                                        $this->lobbies[$code]['owner']->send(json_encode(['action'=>'remove', 'id'=>3, 'code'=>$code, 'userID' => $connectionID, 'message' => "$connectionID has been removed from queue!", 'error'=>false]));
+                
+                                        break;
+                                    }
+                
+                                }
+                            }
+                             
             
                             // Send the waiting list to the lobby owner
                         }
