@@ -283,7 +283,7 @@ class Chat implements MessageComponentInterface {
                             return;
                         if(isset($data->alias) == false || is_string($data->alias) == false)
                             return;
-                            
+
                         $code = $data->code;
                         $alias = $data->alias;
 
@@ -418,6 +418,35 @@ class Chat implements MessageComponentInterface {
             
                                     $conn->send(json_encode(['action'=>'accept', 'id'=>0, 'code'=>$code, 'message' => "You have been added as a member!", 'error'=>false]));
                                     $this->lobbies[$code]['owner']->send(json_encode(['action'=>'accept', 'id'=>1, 'code'=>$code, 'userID' => $connectionID, 'message' => "$connectionID has been added!", 'error'=>false]));
+            
+                                    break;
+                                }
+            
+                            }
+            
+                            // Send the waiting list to the lobby owner
+                        }
+                        break;
+                    }
+                case 'decline':
+                    {
+                        if(isset($data->code) == false || is_string($data->code) == false || $this->isValidCode($data->code) == false)
+                            return;
+                        if(isset($data->userID) == false || is_numeric($data->userID) == false)
+                            return;
+
+                        $code = $data->code;
+                        $connectionID = $data->userID;
+
+                        if (isset($this->lobbies[$code]) && $this->lobbies[$code]['isClosed'] && $this->lobbies[$code]['owner'] === $from) {
+                            foreach ($this->lobbies[$code]['waiting_room'] as $index => $conn) 
+                            {
+                                //Two equal-signs, will automatically make the two operands the same type.
+                                if ($conn->resourceId == $connectionID) {
+                                    $this->lobbies[$code]['waiting_room']->detach($conn);
+            
+                                    $conn->send(json_encode(['action'=>'decline', 'id'=>0, 'code'=>$code, 'message' => "You have been removed from queue!", 'error'=>false]));
+                                    $this->lobbies[$code]['owner']->send(json_encode(['action'=>'decline', 'id'=>1, 'code'=>$code, 'userID' => $connectionID, 'message' => "$connectionID has been removed from queue!", 'error'=>false]));
             
                                     break;
                                 }
