@@ -106,13 +106,13 @@ class Chat implements MessageComponentInterface {
             if ($lobby['clients']->contains($conn)) {
                 $lobby['clients']->detach($conn);
                 //Notifying the lobby owner that someone left the lobby.
-                $this->lobbies[$code]['owner']->send(json_encode(['action'=>'left', 'id'=>0, 'code'=>$code, 'clientID'=>$conn->resourceId, 'message'=>"Someone left the lobby!", 'error'=>false]));
+                $this->lobbies[$code]['owner']->send(json_encode(['action'=>'leave', 'id'=>0, 'code'=>$code, 'clientID'=>$conn->resourceId, 'message'=>"Someone left the lobby!", 'error'=>false]));
             }
             // Remove the client from the waiting room if it is a member
             else if ($lobby['isClosed'] && $lobby['waiting_room']->contains($conn)) {
                 $lobby['waiting_room']->detach($conn);
                 //Notifying the lobby owner that someone left the que.
-                $this->lobbies[$code]['owner']->send(json_encode(['action'=>'left', 'id'=>1, 'code'=>$code, 'clientID'=>$conn->resourceId, 'message'=>"Someone left the queue!", 'error'=>false]));
+                $this->lobbies[$code]['owner']->send(json_encode(['action'=>'leave', 'id'=>1, 'code'=>$code, 'clientID'=>$conn->resourceId, 'message'=>"Someone left the queue!", 'error'=>false]));
             }
 
 
