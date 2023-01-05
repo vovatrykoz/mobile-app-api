@@ -115,6 +115,10 @@ class Chat implements MessageComponentInterface {
                 $this->lobbies[$code]['owner']->send(json_encode(['action'=>'leave', 'id'=>1, 'code'=>$code, 'clientID'=>$conn->resourceId, 'message'=>"Someone left the queue!", 'error'=>false]));
             }
 
+            if(isset($this->lobbies[$code]['aliases'][$conn->resourceId]))
+            {
+                unset($this->lobbies[$code]['aliases'][$conn->resourceId]);
+            }
 
         }
     }
@@ -191,7 +195,7 @@ class Chat implements MessageComponentInterface {
                     'isClosed' => false
                 ];
 
-                if ($password) {
+                if ($password && $password !== "") {
                     // Add the password-specific elements to the common elements array
                     $commonElements['hasPassword']  = true;
                     $commonElements['password']     = $password;
@@ -440,6 +444,11 @@ class Chat implements MessageComponentInterface {
 
                         if (isset($this->lobbies[$code]) && $this->lobbies[$code]['owner'] === $from) {
                             $isRemoved = false;
+
+                            if(isset($this->lobbies[$code]['aliases'][$connectionID]))
+                            {
+                                unset($this->lobbies[$code]['aliases'][$connectionID]);
+                            }
 
                             foreach ($this->lobbies[$code]['clients'] as $index => $conn) 
                             {
