@@ -58,7 +58,7 @@ class DefaultController extends BaseController
      */
     public function getAllSets()
     {
-        $this->sendResponse($this->getAction([], "getAllSets"));
+        $this->sendResponse($this->getAction(["offset"], "getAllSets"));
     }
 
     /**

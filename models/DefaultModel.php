@@ -80,10 +80,16 @@ class DefaultModel extends Database
         );
     }
 
-    public function getAllSets()
+    public function getAllSets($inParams)
     {
+        $outParams = array([
+            'paramType' => "i",
+            'paramValue' => $inParams['offset']
+        ]);
+
         return $this->select(
-            "CALL usp_get_all_sets();"
+            "CALL usp_get_all_sets(?);",
+            $outParams
         );
     }
 
