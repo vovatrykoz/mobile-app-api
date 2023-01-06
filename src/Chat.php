@@ -17,16 +17,21 @@ use Ratchet\WebSocket\WsConnection;
 class Chat implements MessageComponentInterface {
     // Set the maximum inactive time for a lobby to 24 hours
     const MAX_INACTIVE_TIME = 86400;
+    //The amount of retries if the client doesn't respond.
     const MAX_FAILURE_COUNT = 3;
 
+    //Contains array of lobbies
     protected $lobbies;
+    //Contains array of all connections
     protected $connections;
     
+    //Default constructor, initilizes the variables
     public function __construct() {
         $this->lobbies = [];
         $this->connections = new \SplObjectStorage;
     }
 
+    //Method to generate lobby code, as of now just genreates a random integer between 100000 and 999999
     private function generateLobbyCode(){
         $code = null;
         do{
@@ -36,11 +41,13 @@ class Chat implements MessageComponentInterface {
         return $code;
     }
 
+    //Chekc if the code is valid
     private function isValidCode($code)
     {
         return preg_match('/^\d{6}$/', $code) === 1;
     }
 
+    //Method to broad cast message to everyone in a room
     private function broadcastMessage($id, $code, $msg){
         // Iterate over the clients in the lobby and send the broadcast message
         foreach ($this->lobbies[$code]['clients'] as $client) {
@@ -55,6 +62,7 @@ class Chat implements MessageComponentInterface {
         }
     }
 
+    //Check if a connection/user is a valid member of a lobby.
     private function isValidMember($code, $conn)
     {
         if (isset($this->lobbies[$code]) && $this->lobbies[$code]['clients']->contains($conn)) {
@@ -63,6 +71,7 @@ class Chat implements MessageComponentInterface {
         return false;
     }
 
+    //Check if alias is used in a lobby.
     private function isAliasInUse($code, $alias)
     {
         if(isset($this->lobbies[$code]))
@@ -80,6 +89,7 @@ class Chat implements MessageComponentInterface {
         return false;
     }
 
+    //Function to set alias of a user in a lobby 
     private function setAlias($code, $alias, $conn)
     {
         if(isset($this->lobbies[$code])){
@@ -100,7 +110,8 @@ class Chat implements MessageComponentInterface {
         }
     }
 
-    protected function removeClientFromLobby(ConnectionInterface $conn) {
+    //Removing a client from all lobbies they might be connected to.
+    protected function removeClientFromLobbies(ConnectionInterface $conn) {
         // Iterate over all lobbies and remove the client if it is a member
         foreach ($this->lobbies as $code => $lobby) {
             if ($lobby['clients']->contains($conn)) {
@@ -123,6 +134,7 @@ class Chat implements MessageComponentInterface {
         }
     }
 
+    //When a connection is established for the first time 
     public function onOpen(ConnectionInterface $conn) {
         $lobbyCodes = [];
         $this->connections->attach($conn);
@@ -145,9 +157,9 @@ class Chat implements MessageComponentInterface {
         echo "New connection! ({$conn->resourceId})\n";
     }
 
-    //Maybe remove lobby is user is owner
+    //When the socket connection is clsoed, remove the connection from all lobbies and detatch them from the connections SplObjectStorage.
     public function onClose(ConnectionInterface $conn) {
-        $this->removeClientFromLobby($conn);
+        $this->removeClientFromLobbies($conn);
         $this->connections->detach($conn);
 
         echo "Connection {$conn->resourceId} has disconnected\n";
@@ -158,11 +170,15 @@ class Chat implements MessageComponentInterface {
         echo "ERROR OCCURED: " . $e;
     }
     
+    //When message is recieved from the connection/client
     public function onMessage(ConnectionInterface $from, $msg) {
         //the json header
         //$conn->httpResponse->setHeader('Content-Type', 'application/json');
 
+        //Setting the connctions heartbeatResponse to indicate the user is indeed still available and connected
+        //Message from client = they are still alive 
         $from->heartbeatResponse = true;
+        
         // Parse the incoming JSON data
         $data = json_decode($msg);
 
@@ -173,6 +189,7 @@ class Chat implements MessageComponentInterface {
         }
 
         switch ($data->action) {
+            //The user wants to create a new lobby
             case 'create':
             {
                 // Generate a random 6-digit code if none is provided
@@ -203,6 +220,7 @@ class Chat implements MessageComponentInterface {
 
                 if($is_public === false)
                 {
+                    // Making the lobby 
                     $commonElements['isClosed']     = true;
                     $commonElements['waiting_room'] = new \SplObjectStorage;
                 }
@@ -218,27 +236,34 @@ class Chat implements MessageComponentInterface {
             // Check if the message is a command to join a lobby
             case 'join':
                 {
+                    //Checking so the required variables is set
                     if(isset($data->code) == false || is_string($data->code) == false || $this->isValidCode($data->code) == false)
                         return;
                     $code = $data->code;
 
+                    //The optional variables
                     $password = (isset($data->password) && is_string($data->password)) ? $data->password : null;
                     $alias = (isset($data->alias) && is_string($data->alias)) ? $data->alias : null;
 
+                    //Check if a lobby with the specified code exists
                     if (isset($this->lobbies[$code])) {
+                        //If the user is already in the specified lobby
                         if($this->lobbies[$code]['clients']->contains($from) || ($this->lobbies[$code]['isClosed'] && $this->lobbies[$code]['waiting_room']->contains($from)))
                         {
                             $from->send(json_encode(['action'=>'join', 'id'=>0, 'code'=>$code, 'message'=>"You are already registered in this lobby!", 'error'=>true]));
                             return;
                         }
         
+                        //If the password is wrong
                         if ($this->lobbies[$code]['hasPassword'] && $password !== $this->lobbies[$code]['password']) {
                             $from->send(json_encode(['action'=>'join', 'id'=>1, 'code'=>$code, 'message'=>"Wrong password", 'error'=>true]));
                             return;
                         }
         
+                        //Setting last active time to indicate that the lobby is still active
                         $this->lobbies[$code]['lastActiveTime'] = time();
         
+                        //If the lobby is closed, i.e place the new user in the queue.
                         if($this->lobbies[$code]['isClosed'])
                         {
                             // Add the connection to the lobby
@@ -248,6 +273,7 @@ class Chat implements MessageComponentInterface {
                             $from->send(json_encode(['action'=>'join', 'id'=>0, 'code'=>$code, 'message'=>"You have been placed in queue.", 'error'=>false]));
                             $this->lobbies[$code]['owner']->send(json_encode(['action'=>'notification', 'id'=>0, 'code'=>$code, 'clientID'=>$from->resourceId, 'message'=>"Someone joined the queue!", 'error'=>false]));
                         }
+                        //Public lobby so make the new user a member.
                         else{
                             // Add the connection to the lobby
                             $this->lobbies[$code]['clients']->attach($from);
@@ -257,12 +283,14 @@ class Chat implements MessageComponentInterface {
                             $this->lobbies[$code]['owner']->send(json_encode(['action'=>'notification', 'id'=>1, 'code'=>$code, 'clientID'=>$from->resourceId, 'message'=>"Someone joined the lobby!", 'error'=>false]));
                         }
         
+                        //If the user specifies an alias when connecting.
                         if($alias)
                         {
                             $this->setAlias($code, $alias, $from);
                         }
 
                     } else {
+                        //The lobby doesn't exist
                         $from->send(json_encode(['action'=>'join', 'id'=>2, 'code'=>$code, 'message'=>"Lobby with code $code not found", 'error'=>true]));
                     }
                     break;
@@ -274,6 +302,7 @@ class Chat implements MessageComponentInterface {
                             return;
                         $code = $data->code;
 
+                        //Check if lobby exists and if the user is a owner
                         if (isset($this->lobbies[$code]) && $this->lobbies[$code]['owner'] === $from) {
                             $this->broadcastMessage(0, $code, "Lobby with code $code has been closed!");
                             // Remove the lobby from the list of lobbies
@@ -283,6 +312,7 @@ class Chat implements MessageComponentInterface {
                 // Check if the message is a command to set the alias
                 case 'setalias':
                     {
+                        //Checking so required variables are set
                         if(isset($data->code) == false || is_string($data->code) == false || $this->isValidCode($data->code) == false)
                             return;
                         if(isset($data->alias) == false || is_string($data->alias) == false)
@@ -291,14 +321,17 @@ class Chat implements MessageComponentInterface {
                         $code = $data->code;
                         $alias = $data->alias;
 
+                        //Setting users alias.
                         $this->setAlias($code, $alias, $from);
                         break;
                     }
                 case 'risehand':
                     {
+                        //Required variable
                         if(isset($data->code) == false || is_string($data->code) == false || $this->isValidCode($data->code) == false)
                             return;
                         $code = $data->code;
+                        //Optional message to include
                         $message = (isset($data->message) && is_string($data->message)) ? $data->message : '';
 
                         //If the user is a member of the lobby
@@ -319,18 +352,21 @@ class Chat implements MessageComponentInterface {
                         }
                         break;
                     }
+                //The user wants to lower their hand
                 case 'lowerhand':
                     {
                         if(isset($data->code) == false || is_string($data->code) == false || $this->isValidCode($data->code) == false)
                             return;
                         $code = $data->code;
 
+                        //If userid variable is set
                         $isUserIDSet = (isset($data->userID) && is_numeric($data->userID));
                         $userID = ($isUserIDSet) ? (int)$data->userID : $from->resourceId;
 
                         if ($this->isValidMember($code, $from) && isset($this->lobbies[$code]['risedHands'][$userID])){
                             
                             //isset($this->lobbies[$code]['risedHands'][$userID])
+                            //Owner wants to manually lower a users hand
                             if($isUserIDSet)
                             {
             
@@ -349,6 +385,7 @@ class Chat implements MessageComponentInterface {
                                     //...
                                 }
                             }
+                            //The user wants to lower their own hand
                             else{
                                 unset($this->lobbies[$code]['risedHands'][$userID]);
                                 $this->lobbies[$code]['owner']->send(json_encode(['action'=>'lowerhand', 'id'=>2, 'code'=>$code, 'userID'=>$userID, 'message'=>"Someone just lowered their hand!", 'error'=>false]));
@@ -359,12 +396,15 @@ class Chat implements MessageComponentInterface {
                         }
                         break;
                     }
+                //Getting the list of members in the queue
                 case 'queue':
                     {
+                        //required variable
                         if(isset($data->code) == false || is_string($data->code) == false || $this->isValidCode($data->code) == false)
                             return;
                         $code = $data->code;
 
+                        //Check if the lobby exists and the user is owner
                         if (isset($this->lobbies[$code]) && $this->lobbies[$code]['isClosed'] && $this->lobbies[$code]['owner'] === $from) {
                             $queueList = [];
             
@@ -379,7 +419,7 @@ class Chat implements MessageComponentInterface {
                         }
                         break;
                     }
-                // Check if the message is a command to check queue of a lobby
+                //Getting the list of members in the lobby, i.e. not he queue
                 case 'members':
                     {
                         if(isset($data->code) == false || is_string($data->code) == false || $this->isValidCode($data->code) == false)
@@ -400,9 +440,10 @@ class Chat implements MessageComponentInterface {
                         }
                         break;
                     }
-                // Check if the message is a command to accept member in queue
+                // Check if the message is a command to accept amember in queue
                 case 'accept':
                     {
+                        //Required variables
                         if(isset($data->code) == false || is_string($data->code) == false || $this->isValidCode($data->code) == false)
                             return;
                         if(isset($data->userID) == false || is_numeric($data->userID) == false)
@@ -432,6 +473,7 @@ class Chat implements MessageComponentInterface {
                         }
                         break;
                     }
+                    //Remove a user/connection from a lobby or queue
                 case 'remove':
                     {
                         if(isset($data->code) == false || is_string($data->code) == false || $this->isValidCode($data->code) == false)
@@ -524,11 +566,12 @@ class Chat implements MessageComponentInterface {
             //The client didn't respond to the last heartbeat!
             else
             {
+                //The haven't responded for the maximum amount of retries.
                 if($conn->failureCount >= self::MAX_FAILURE_COUNT)
                 {
                     echo "Connection is getting closed!";
                     //Close the connection
-                    $this->removeClientFromLobby($conn);
+                    $this->removeClientFromLobbies($conn);
                     $this->connections->detach($conn);
                     $conn->close();
                     
