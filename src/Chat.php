@@ -110,27 +110,49 @@ class Chat implements MessageComponentInterface {
         }
     }
 
-    //Removing a client from all lobbies they might be connected to.
-    protected function removeClientFromLobbies(ConnectionInterface $conn) {
-        // Iterate over all lobbies and remove the client if it is a member
-        foreach ($this->lobbies as $code => $lobby) {
-            if ($lobby['clients']->contains($conn)) {
-                $lobby['clients']->detach($conn);
+    private function closeLobby($code)
+    {
+        if (isset($this->lobbies[$code])) {
+            $this->broadcastMessage(0, $code, "Lobby with code $code has been closed!");
+            // Remove the lobby from the list of lobbies
+            unset($this->lobbies[$code]);
+        }
+    }
+
+    protected function removeClientFromLobby(ConnectionInterface $conn, $code){
+        if(isset($this->lobbies[$code]))
+        {
+            //Close the lobby if the owner leaves the room.
+            if($this->lobbies[$code]['owner'] === $conn)
+            {
+                $this->closeLobby($code);
+                return;
+            }
+
+            if ($this->lobbies[$code]['clients']->contains($conn)) {
+                $this->lobbies[$code]['clients']->detach($conn);
                 //Notifying the lobby owner that someone left the lobby.
                 $this->lobbies[$code]['owner']->send(json_encode(['action'=>'leave', 'id'=>0, 'code'=>$code, 'clientID'=>$conn->resourceId, 'message'=>"Someone left the lobby!", 'error'=>false]));
             }
             // Remove the client from the waiting room if it is a member
-            else if ($lobby['isClosed'] && $lobby['waiting_room']->contains($conn)) {
-                $lobby['waiting_room']->detach($conn);
+            else if ($this->lobbies[$code]['isClosed'] && $this->lobbies[$code]['waiting_room']->contains($conn)) {
+                $this->lobbies[$code]['waiting_room']->detach($conn);
                 //Notifying the lobby owner that someone left the que.
                 $this->lobbies[$code]['owner']->send(json_encode(['action'=>'leave', 'id'=>1, 'code'=>$code, 'clientID'=>$conn->resourceId, 'message'=>"Someone left the queue!", 'error'=>false]));
             }
-
+    
             if(isset($this->lobbies[$code]['aliases'][$conn->resourceId]))
             {
                 unset($this->lobbies[$code]['aliases'][$conn->resourceId]);
             }
+        }
+    }
 
+    //Removing a client from all lobbies they might be connected to.
+    protected function removeClientFromLobbies(ConnectionInterface $conn) {
+        // Iterate over all lobbies and remove the client if it is a member
+        foreach ($this->lobbies as $code => $lobby) {
+            $this->removeClientFromLobby($conn, $code);
         }
     }
 
@@ -303,10 +325,8 @@ class Chat implements MessageComponentInterface {
                         $code = $data->code;
 
                         //Check if lobby exists and if the user is a owner
-                        if (isset($this->lobbies[$code]) && $this->lobbies[$code]['owner'] === $from) {
-                            $this->broadcastMessage(0, $code, "Lobby with code $code has been closed!");
-                            // Remove the lobby from the list of lobbies
-                            unset($this->lobbies[$code]);
+                        if ($this->lobbies[$code]['owner'] === $from) {
+                            $this->closeLobby($code);
                         }
                     }
                 // Check if the message is a command to set the alias
