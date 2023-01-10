@@ -11,6 +11,11 @@ class DefaultController extends BaseController
         $this->strErrorDesc = '';
     }
 
+    public function checkIfUsernameTaken()
+    {
+        $this->sendResponse($this->getAction(["username"], "checkIfUserExist"));
+    }
+
     /**
      * get all the entries in a set
      */

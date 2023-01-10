@@ -3,6 +3,21 @@ require_once "database.php";
 
 class DefaultModel extends Database
 {
+    public function checkIfUserExist($inParams)
+    {
+        $outParams = array(
+            [
+                'paramType' => "s",
+                'paramValue' => $inParams['username']
+            ]
+        );
+
+        return $this->select(
+            "CALL usp_check_if_username_exists(?);",
+            $outParams
+        );
+    }
+
     public function checkUser($inParams)
     {
         $outParams = array(
