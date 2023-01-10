@@ -229,7 +229,7 @@ class Chat implements MessageComponentInterface {
                     'owner' => $from,
                     'lastActiveTime' => time(),
                     'aliases' => [],
-                    'risedHands' => [],
+                    'raisedHands' => [],
                     'hasPassword' => false,
                     'isClosed' => false
                 ];
@@ -345,7 +345,7 @@ class Chat implements MessageComponentInterface {
                         $this->setAlias($code, $alias, $from);
                         break;
                     }
-                case 'risehand':
+                case 'raisehand':
                     {
                         //Required variable
                         if(isset($data->code) == false || is_string($data->code) == false || $this->isValidCode($data->code) == false)
@@ -360,13 +360,13 @@ class Chat implements MessageComponentInterface {
                             $alias = $lobby['aliases'][$from->resourceId] ?? null;
                             if(!isset($alias))
                             {
-                                $from->send(json_encode(['action'=>'risehand', 'id'=>0, 'code'=>$code, 'message'=>"Please set a alias.", 'error'=>true]));
+                                $from->send(json_encode(['action'=>'raisehand', 'id'=>0, 'code'=>$code, 'message'=>"Please set a alias.", 'error'=>true]));
                             }
                             else{
                                 $metadata = array('userID'=>$from->resourceId, 'alias'=>$alias, 'message'=>$message);
-                                $this->lobbies[$code]['risedHands'][$from->resourceId] = $metadata;
-                                $lobby['owner']->send(json_encode(['action'=>'risehand', 'id'=>0, 'code'=>$code, 'metadata'=>$metadata, 'error'=>false]));
-                                $from->send(json_encode(['action'=>'risehand', 'id'=>1, 'code'=>$code, 'message'=>"Success: Your hand is raised!", 'error'=>false]));
+                                $this->lobbies[$code]['raisedHands'][$from->resourceId] = $metadata;
+                                $lobby['owner']->send(json_encode(['action'=>'raisehand', 'id'=>0, 'code'=>$code, 'metadata'=>$metadata, 'error'=>false]));
+                                $from->send(json_encode(['action'=>'raisehand', 'id'=>1, 'code'=>$code, 'message'=>"Success: Your hand is raised!", 'error'=>false]));
                                 $lobby['lastActiveTime'] = time();
                             }
                         }
@@ -383,15 +383,15 @@ class Chat implements MessageComponentInterface {
                         $isUserIDSet = (isset($data->userID) && is_numeric($data->userID));
                         $userID = ($isUserIDSet) ? (int)$data->userID : $from->resourceId;
 
-                        if ($this->isValidMember($code, $from) && isset($this->lobbies[$code]['risedHands'][$userID])){
+                        if ($this->isValidMember($code, $from) && isset($this->lobbies[$code]['raisedHands'][$userID])){
                             
-                            //isset($this->lobbies[$code]['risedHands'][$userID])
+                            //isset($this->lobbies[$code]['raisedHands'][$userID])
                             //Owner wants to manually lower a users hand
                             if($isUserIDSet)
                             {
             
                                 if($this->lobbies[$code]['owner'] === $from){
-                                    unset($this->lobbies[$code]['risedHands'][$userID]);
+                                    unset($this->lobbies[$code]['raisedHands'][$userID]);
                                     $this->lobbies[$code]['owner']->send(json_encode(['action'=>'lowerhand', 'id'=>0, 'code'=>$code, 'userID'=>$userID, 'message'=>"Hand lowered successfully!", 'error'=>false]));
                                     //User might have left the lobby since then
                                     foreach ($this->lobbies[$code]['clients'] as $currentConn) {
@@ -407,7 +407,7 @@ class Chat implements MessageComponentInterface {
                             }
                             //The user wants to lower their own hand
                             else{
-                                unset($this->lobbies[$code]['risedHands'][$userID]);
+                                unset($this->lobbies[$code]['raisedHands'][$userID]);
                                 $this->lobbies[$code]['owner']->send(json_encode(['action'=>'lowerhand', 'id'=>2, 'code'=>$code, 'userID'=>$userID, 'message'=>"Someone just lowered their hand!", 'error'=>false]));
                                 $from->send(json_encode(['action'=>'lowerhand', 'id'=>3, 'code'=>$code, 'message'=>"Success: Your hand is lowered!", 'error'=>false]));
             
